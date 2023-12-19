@@ -26,7 +26,7 @@ class Viewer(QtWidgets.QWidget):
     def __init__(self,streams:list):
         super(Viewer, self).__init__()
         
-        self.configs = ViewerConfigs(color_per_plot=False,background_plot_color='w')
+        self.configs = ViewerConfigs()
         
         self.streams = streams
         
@@ -50,10 +50,12 @@ class Viewer(QtWidgets.QWidget):
         self.stream_plots = []
         self.stream_curves = []
         self.time_markers1 = []
-        self.markers = []
+        self.time_markers2 = []
+        self.markers = dict()
         
         self.samples = []
         self.start_indexs = []
+        self.labels = []
         
         self.initial_plots = []
         
@@ -70,11 +72,10 @@ class Viewer(QtWidgets.QWidget):
         self.overlayed_window.setFixedWidth(1700)
         self.overlayed_window.setBackground(None)
         self.overlayed_window.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.lay.addViewBox().setMouseEnabled(x=False, y=False)
         
         label = pg.LabelItem("PSEUDOLABEL",color=self.configs.background_plot_color)
-        # label.hideAxis('bottom')
         self.overlayed_window.addItem(label, row=0,col=0)
-        # self.overlayed_window.hideAxis('bottom')
         
         ###-----------------------------------------------
         
@@ -90,13 +91,14 @@ class Viewer(QtWidgets.QWidget):
         self.plotWidget1.hideAxis('left')
         self.plotWidget1.setYRange(0, 0.99, padding=0)
         self.plotWidget1.hideAxis('bottom')
-
-        
+        self.plotWidget1.getViewBox().setMouseEnabled(x=False, y=False)
+    
         for marker_stream in range(len(self.streams_markers)):
             marker1 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_for_markers, width=5))
+            marker1.setValue(0)
+            self.label_marker = pg.InfLineLabel(marker1,text='Label Bitch',movable=False,anchor=(0,5, 0),position=0.81)
             self.plotWidget1.addItem(marker1)
-            self.markers.append(marker1)
-        
+            self.markers[marker_stream] = marker1
         
         for stream in self.streams_data:
             
@@ -113,10 +115,17 @@ class Viewer(QtWidgets.QWidget):
             
             self.x_marker_axis.append(np.linspace(0,self.configs.n_seconds_per_screen,int(sampling_freq * self.configs.n_seconds_per_screen)))
             self.y_marker_axis.append(np.ones((int(sampling_freq * self.configs.n_seconds_per_screen),)))
-            
+        
             time_marker1 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_time_marker, width=5))
             self.plotWidget1.addItem(time_marker1)
             self.time_markers1.append(time_marker1)
+            
+            time_marker2 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_time_marker, width=5))
+            self.plotWidget2.addItem(time_marker2)
+            self.time_markers2.append(time_marker2)
+            
+            curve = self.plotWidget2.plot(pen='k')
+            curve.setData(self.x_marker_axis[-1],self.y_marker_axis[-1])
             
             curve = self.plotWidget1.plot(pen='k')
             curve.setData(self.x_marker_axis[-1],self.y_marker_axis[-1])
@@ -128,6 +137,8 @@ class Viewer(QtWidgets.QWidget):
             
             for chan_id in range(num_channels):
                 label = pg.LabelItem(channel_names[chan_id],color=self.configs.color_label)
+                self.labels.append(label)
+                
                 self.lay.addItem(label, row=self.plot_id,col=0)
                 self.lay.setBackground(self.configs.background_plot_color)
                 
@@ -136,8 +147,8 @@ class Viewer(QtWidgets.QWidget):
                 plotWidget.enableAutoRange('y', True)  # Enable autorange for y-axis
                 plotWidget.hideAxis('left')  # Hide y-axis for clarity
                 
-                # if chan_id!=num_channels-1:
-                    # plotWidget.hideAxis('bottom')
+                if chan_id!=num_channels-1:
+                    plotWidget.hideAxis('bottom')
                 
                 if self.configs.color_per_plot:
                     curve = plotWidget.plot(pen=(self.plot_id, num_channels))
@@ -165,10 +176,18 @@ class Viewer(QtWidgets.QWidget):
     
     def toggle_channel_visibility(self, channel_index, is_visible):
         """Toggle the visibility of the specified channel."""
-        self.stream_plots[channel_index].setVisible(is_visible)
+        # self.stream_plots[channel_index].setVisible(is_visible)
         
-        # del self.stream_curves[channel_index]
+        print("PUSHED THE BUTTONN BOIIIIIIIIII")
+        print(is_visible)
+        print(channel_index)
         
+        if is_visible == False:
+            self.lay.removeItem(self.labels[channel_index])
+            self.lay.removeItem(self.stream_plots[channel_index])
+        else:
+            self.lay.addItem(self.labels[channel_index],row = channel_index,col = 0)
+            self.lay.addItem(self.stream_plots[channel_index],row = channel_index,col = 1)
         
     def find_index_in_stream(self,x_axis,ts):
         dif = 10e5
@@ -249,6 +268,7 @@ class Viewer(QtWidgets.QWidget):
         for stream_id in range(len(self.streams_markers)):    
             new_data,time_ = self.streams_markers[stream_id].update()
             if time_:
+                text_label = new_data[0][0].split(',')[0]
                 if not self.timestamps_from_streams:
                     self.time_marker_ts.append(time_[0])
                 else:
@@ -258,7 +278,17 @@ class Viewer(QtWidgets.QWidget):
                             marker_ts_index = self.find_index_in_stream(x_axis=self.timestamps_from_streams[i],ts=time_[0])
                             print(marker_ts_index,len(self.timestamps_from_streams[i]))
                             print(marker_ts_index,self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
-                            self.markers[stream_id].setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
+                            # self.markers[stream_id].setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
+                            
+                            self.plotWidget1.removeItem(self.markers[stream_id])
+                            
+                            marker = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_for_markers, width=5))
+                            marker.setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
+                            self.plotWidget1.addItem(marker)
+                            self.markers[stream_id] = marker
+                            label_marker = pg.InfLineLabel(marker,text=text_label,movable=False,anchor=(0,5, 0),position=0.81)     
+
+                            
                     else:
                         print("YES")
                         self.time_marker_ts.append(time_[0])
@@ -266,6 +296,16 @@ class Viewer(QtWidgets.QWidget):
                             marker_ts_index = self.find_index_in_stream(x_axis=self.timestamps_from_streams[i],ts=self.time_marker_ts[0])
                             print(marker_ts_index,self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
                             self.markers[stream_id].setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
+                            # self.label_marker = pg.InfLineLabel(self.markers[stream_id],text=text_label,movable=False,anchor=(0.5, 0),position=0.5)
+                            
+                            self.plotWidget1.removeItem(self.markers[stream_id])
+                            
+                            marker = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_for_markers, width=5))
+                            marker.setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
+                            self.plotWidget1.addItem(marker)
+                            self.markers[stream_id] = marker
+                            label_marker = pg.InfLineLabel(marker,text=text_label,movable=False,anchor=(0,5, 0),position=0.81)     
+
                             del self.time_marker_ts[0]
 
         self.timestamps_from_streams = []   
