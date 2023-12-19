@@ -1,16 +1,19 @@
 import sys
 # from PyQt5 import QtWidgets, QtCore
-from qtpy import QtWidgets,QtCore
+from qtpy import QtWidgets,QtCore,QtGui
 from qtpy.QtWidgets import QScrollArea,QHBoxLayout
+from PyQt5.QtGui import QPalette, QColor,QColorConstants,QRgba64
 from qtpy.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 import pylsl
-from test_matplotlib import EEGViewer
+from EEGViewer_plot_algo import Viewer
 from receiver_data import ReceiveData
+import time
+
 
 class Ui_MainWindow(object):
-   def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowTitle("EEG VIEWER")
         self.centralWidget = QtWidgets.QWidget(MainWindow)
@@ -20,16 +23,14 @@ class Ui_MainWindow(object):
         
         receiver = ReceiveData()
         streams = receiver.inlets
-        self.eegViewer = EEGViewer(streams=streams,color_label='w',color_time_marker='r',color_per_plot=True,color_for_plots='b',background_plot_color='k',n_seconds_per_screen = 5)
+        self.eegViewer = Viewer(streams=streams)
         
         self.scrollbar = QScrollArea()
-        # self.scrollbar.resize(800,600)
         self.scrollbar.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.scrollbar.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scrollbar.setWidgetResizable(True)
         self.scrollbar.setWidget(self.eegViewer.lay)
         self.scrollbar.show()
-        
         
         self.titleLabel = QtWidgets.QLabel("Channel Selection")
         self.titleLabel.setAlignment(QtCore.Qt.AlignCenter)
@@ -39,8 +40,7 @@ class Ui_MainWindow(object):
         self.checkboxPanel.setFixedHeight(1500)
         self.checkboxLayout = QtWidgets.QVBoxLayout(self.checkboxPanel)
         self.checkboxLayout.addWidget(self.titleLabel)
-        
-        
+    
         self.scrollbar1 = QScrollArea()
         self.scrollbar1.setFixedWidth(200)
         self.scrollbar1.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -48,7 +48,7 @@ class Ui_MainWindow(object):
         self.scrollbar1.setWidgetResizable(True)
         self.scrollbar1.setWidget(self.checkboxPanel)
         self.scrollbar1.show()
-    
+        
         num_channels = self.eegViewer.plot_id  # Assuming this is the number of EEG channels
         self.checkboxes = []
         
@@ -61,11 +61,12 @@ class Ui_MainWindow(object):
         
         MainWindow.setCentralWidget(self.centralWidget)
         self.centralWidget.setLayout(self.layout1)
+        
         self.layout1.addLayout(self.layout2)
         self.layout1.addWidget(self.scrollbar)
         self.layout2.addWidget(self.scrollbar1)
-        
-        
+            
+            
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
