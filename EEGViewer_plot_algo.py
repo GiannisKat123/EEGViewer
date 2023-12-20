@@ -50,7 +50,6 @@ class Viewer(QtWidgets.QWidget):
         self.stream_plots = []
         self.stream_curves = []
         self.time_markers1 = []
-        self.time_markers2 = []
         self.markers = dict()
         
         self.samples = []
@@ -72,7 +71,7 @@ class Viewer(QtWidgets.QWidget):
         self.overlayed_window.setFixedWidth(1700)
         self.overlayed_window.setBackground(None)
         self.overlayed_window.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
-        self.lay.addViewBox().setMouseEnabled(x=False, y=False)
+        # self.lay.addViewBox().setMouseEnabled(x=False, y=False)
         
         label = pg.LabelItem("PSEUDOLABEL",color=self.configs.background_plot_color)
         self.overlayed_window.addItem(label, row=0,col=0)
@@ -96,7 +95,7 @@ class Viewer(QtWidgets.QWidget):
         for marker_stream in range(len(self.streams_markers)):
             marker1 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_for_markers, width=5))
             marker1.setValue(0)
-            self.label_marker = pg.InfLineLabel(marker1,text='Label Bitch',movable=False,anchor=(0,5, 0),position=0.81)
+            # self.label_marker = pg.InfLineLabel(marker1,text='Label Bitch',movable=False,anchor=(0,5, 0),position=0.81)
             self.plotWidget1.addItem(marker1)
             self.markers[marker_stream] = marker1
         
@@ -119,13 +118,6 @@ class Viewer(QtWidgets.QWidget):
             time_marker1 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_time_marker, width=5))
             self.plotWidget1.addItem(time_marker1)
             self.time_markers1.append(time_marker1)
-            
-            time_marker2 = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(self.configs.color_time_marker, width=5))
-            self.plotWidget2.addItem(time_marker2)
-            self.time_markers2.append(time_marker2)
-            
-            curve = self.plotWidget2.plot(pen='k')
-            curve.setData(self.x_marker_axis[-1],self.y_marker_axis[-1])
             
             curve = self.plotWidget1.plot(pen='k')
             curve.setData(self.x_marker_axis[-1],self.y_marker_axis[-1])
@@ -273,11 +265,8 @@ class Viewer(QtWidgets.QWidget):
                     self.time_marker_ts.append(time_[0])
                 else:
                     if not self.time_marker_ts:
-                        print("NO")
                         for i in range(len(self.timestamps_from_streams)):
                             marker_ts_index = self.find_index_in_stream(x_axis=self.timestamps_from_streams[i],ts=time_[0])
-                            print(marker_ts_index,len(self.timestamps_from_streams[i]))
-                            print(marker_ts_index,self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
                             # self.markers[stream_id].setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
                             
                             self.plotWidget1.removeItem(self.markers[stream_id])
@@ -290,11 +279,9 @@ class Viewer(QtWidgets.QWidget):
 
                             
                     else:
-                        print("YES")
                         self.time_marker_ts.append(time_[0])
                         for i in range(len(self.timestamps_from_streams)):
                             marker_ts_index = self.find_index_in_stream(x_axis=self.timestamps_from_streams[i],ts=self.time_marker_ts[0])
-                            print(marker_ts_index,self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
                             self.markers[stream_id].setValue(self.x_marker_axis[i][marker_samples[i] + marker_ts_index])
                             # self.label_marker = pg.InfLineLabel(self.markers[stream_id],text=text_label,movable=False,anchor=(0.5, 0),position=0.5)
                             
