@@ -1,15 +1,24 @@
 import sys
 # from PyQt5 import QtWidgets, QtCore
 from qtpy import QtWidgets,QtCore,QtGui
-from qtpy.QtWidgets import QScrollArea,QHBoxLayout
+from qtpy.QtWidgets import (
+    QScrollArea,
+    QHBoxLayout,
+    QCheckBox,
+    QGroupBox,
+    QWidget,
+    QVBoxLayout,
+    QSizePolicy,
+)
 from PyQt5.QtGui import QPalette, QColor,QColorConstants,QRgba64
 from qtpy.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 import pylsl
 from EEGViewer_plot_algo import Viewer
-from receiver_data import ReceiveData
+from receiver_data import ReceiveData, Inlet
 import time
+from checkbox import Foldout
 
 
 class Ui_MainWindow(object):
@@ -25,48 +34,54 @@ class Ui_MainWindow(object):
         streams = receiver.inlets
         self.eegViewer = Viewer(streams=streams)
         
-        self.scrollbar = QScrollArea()
-        self.scrollbar.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scrollbar.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scrollbar.setWidgetResizable(True)
-        self.scrollbar.setWidget(self.eegViewer.lay)
-        self.scrollbar.show()
+        self.plot_scrollarea = QScrollArea()
+        self.plot_scrollarea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.plot_scrollarea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.plot_scrollarea.setWidgetResizable(True)
+        self.plot_scrollarea.setWidget(self.eegViewer.lay)
         
-        self.titleLabel = QtWidgets.QLabel("Channel Selection")
-        self.titleLabel.setAlignment(QtCore.Qt.AlignCenter)
-        self.titleLabel.setFixedHeight(100)
+        self.streams_scrollarea = QtWidgets.QScrollArea()
+        self.streams_scrollarea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.streams_scrollarea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.streams_scrollarea.setWidgetResizable(True)
+        self.streams_scrollarea.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         
-        self.checkboxPanel = QtWidgets.QWidget()
-        self.checkboxPanel.setFixedHeight(1500)
-        self.checkboxLayout = QtWidgets.QVBoxLayout(self.checkboxPanel)
-        self.checkboxLayout.addWidget(self.titleLabel)
-    
-        self.scrollbar1 = QScrollArea()
-        self.scrollbar1.setFixedWidth(200)
-        self.scrollbar1.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scrollbar1.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scrollbar1.setWidgetResizable(True)
-        self.scrollbar1.setWidget(self.checkboxPanel)
-        self.scrollbar1.show()
         
-        num_channels = self.eegViewer.plot_id  # Assuming this is the number of EEG channels
-        self.checkboxes = []
-        
-        for i in range(num_channels):
-            chk = QtWidgets.QCheckBox(self.eegViewer.channel_names[i],self.checkboxPanel)
-            chk.setChecked(True)
-            chk.toggled.connect(lambda checked, index=i: self.eegViewer.toggle_channel_visibility(index, checked))
-            self.checkboxLayout.addWidget(chk)
-            self.checkboxes.append(chk)
-        
+        self.setup_stream_list(streams)
         MainWindow.setCentralWidget(self.centralWidget)
         self.centralWidget.setLayout(self.layout1)
         
         self.layout1.addLayout(self.layout2)
-        self.layout1.addWidget(self.scrollbar)
-        self.layout2.addWidget(self.scrollbar1)
+        self.layout1.addWidget(self.plot_scrollarea)
+        self.layout2.addWidget(self.streams_scrollarea)
+    
+    def setup_stream_list(self, streams):
+        channels_widget = QWidget()
+        channels_widget.setLayout(QVBoxLayout())
+        channels_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.streams_scrollarea.setWidget(channels_widget)
+
+        print(streams)
+        for stream in streams:
+            stream: Inlet = stream[0]
+            stream_foldout = Foldout(stream.inlet_name)
+            show_stream_widget = QCheckBox()
+            # connect show stream
+            stream_foldout.add_to_foldout_widget(show_stream_widget)
+            
+            for i in range(stream.channel_count):
+                channel_name = stream.channels_names[i]
+                channel_check = QCheckBox(channel_name)
+                stream_foldout.container.layout().addWidget(channel_check)
+                # channel_check.toggled.connect
+                # connect channel check
+            
+            channels_widget.layout().addWidget(stream_foldout)
+            
+            # channels_widget.layout().addStretch()
             
             
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
